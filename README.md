@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LIFELOG.SYS
 
-## Getting Started
+按你提供的 `blog.html` 设计稿直接落地的 Next.js 15 全栈项目。
 
-First, run the development server:
+## 技术栈
+
+- 前端：Next.js 15 (App Router), React 19, TailwindCSS, shadcn/ui
+- 内容渲染：react-markdown + remark-gfm + rehype
+- 图表：Recharts + Lightweight Charts
+- 地图：Leaflet
+- 后端：Next.js API Routes
+- 数据库：Prisma + PostgreSQL
+- 对象存储：MinIO（S3 兼容）+ Sharp
+
+## 路由
+
+- `/`：重定向到原始设计稿页面
+- `/blog.html`：你提供的页面（原样接入）
+- `/studio`：全栈功能工作台（Markdown/地图/统计/K线）
+
+## API
+
+- `GET/POST /api/posts`
+- `GET/POST /api/travel-locations`
+- `GET/POST /api/travel-photos`
+- `GET/POST /api/fitness-records`
+- `GET/POST /api/fund-accounts`
+- `GET/POST /api/fund-transactions`
+- `POST /api/upload`
+- `GET /api/health`
+
+## 本地运行
 
 ```bash
+npm install
+npm run prisma:generate
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Docker 运行
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+docker compose up --build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+启动后：
 
-## Learn More
+- App: http://localhost:3000
+- MinIO API: http://localhost:9000
+- MinIO Console: http://localhost:9001
+- PostgreSQL: localhost:5432
 
-To learn more about Next.js, take a look at the following resources:
+## 环境变量
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+复制 `.env.example` 为 `.env.local`（本地开发）或使用 `.env.docker`（Docker 编排）。

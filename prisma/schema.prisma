@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum FundTransactionType {
+  BUY
+  SELL
+  DIVIDEND
+  FEE
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  excerpt   String?
+  content   String
+  coverUrl  String?
+  videoUrl  String?
+  tags      String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("posts")
+}
+
+model TravelLocation {
+  id          String   @id @default(cuid())
+  name        String
+  country     String?
+  latitude    Float
+  longitude   Float
+  description String?
+  visitedAt   DateTime?
+  photos      TravelPhoto[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("travel_locations")
+}
+
+model TravelPhoto {
+  id          String         @id @default(cuid())
+  title       String
+  url         String
+  thumbnail   String?
+  medium      String?
+  large       String?
+  locationId  String?
+  location    TravelLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  capturedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("travel_photos")
+}
+
+model FitnessPlan {
+  id              String          @id @default(cuid())
+  name            String
+  startDate       DateTime
+  endDate         DateTime?
+  weeklyPlanDays  Int             @default(5)
+  monthlyPlanDays Int             @default(20)
+  yearlyPlanDays  Int             @default(240)
+  records         FitnessRecord[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("fitness_plans")
+}
+
+model FitnessRecord {
+  id            String      @id @default(cuid())
+  planId        String
+  plan          FitnessPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  trainingDate  DateTime
+  workoutType   String
+  durationMin   Int         @default(0)
+  caloriesBurned Int        @default(0)
+  notes         String?
+  isCompleted   Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([planId, trainingDate])
+  @@map("fitness_records")
+}
+
+model FundAccount {
+  id           String            @id @default(cuid())
+  name         String
+  platform     String
+  baseCurrency String            @default("CNY")
+  transactions FundTransaction[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@map("fund_accounts")
+}
+
+model FundTransaction {
+  id              String              @id @default(cuid())
+  accountId       String
+  account         FundAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  symbol          String
+  transactionType FundTransactionType
+  units           Float               @default(0)
+  price           Float               @default(0)
+  amount          Float
+  fee             Float               @default(0)
+  transactionAt   DateTime
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([accountId, transactionAt])
+  @@map("fund_transactions")
+}
