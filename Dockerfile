@@ -4,6 +4,8 @@ WORKDIR /app
 
 RUN apk add --no-cache ffmpeg libc6-compat
 
+ENV DATABASE_URL=postgresql://lifelog:lifelog@db:5432/lifelog?schema=public
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
