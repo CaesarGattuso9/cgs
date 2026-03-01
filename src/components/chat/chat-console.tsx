@@ -29,25 +29,40 @@ type Message = {
   createdAt: string;
 };
 
+type ChatModels = {
+  chat: string;
+  image: string;
+  video: string;
+};
+
+const DRAFT_ID = "__draft__";
+
 function formatTime(dateStr: string) {
   const date = new Date(dateStr);
   return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
-export function ChatConsole({ username }: { username: string }) {
+export function ChatConsole({ username, models }: { username: string; models: ChatModels }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeId, setActiveId] = useState("");
+  const [activeId, setActiveId] = useState(DRAFT_ID);
   const [messages, setMessages] = useState<Message[]>([]);
   const [mode, setMode] = useState<ChatModeValue>("CHAT");
   const [prompt, setPrompt] = useState("");
-  const [advancedOptions, setAdvancedOptions] = useState("{}");
   const [loadingList, setLoadingList] = useState(false);
   const [loadingSend, setLoadingSend] = useState(false);
   const [error, setError] = useState("");
 
-  const activeConversation = useMemo(() => conversations.find((c) => c.id === activeId) || null, [conversations, activeId]);
+  const activeConversation = useMemo(() => {
+    if (activeId === DRAFT_ID) {
+      return { id: DRAFT_ID, title: "新聊天", updatedAt: "", messageCount: 0 };
+    }
+    return conversations.find((c) => c.id === activeId) || null;
+  }, [conversations, activeId]);
+
+  const currentModel =
+    mode === "CHAT" ? models.chat : mode === "IMAGE" ? models.image : models.video;
 
   const loadConversations = async (search = "") => {
     setLoadingList(true);
@@ -57,8 +72,14 @@ export function ChatConsole({ username }: { username: string }) {
       const json = await resp.json();
       const list: Conversation[] = Array.isArray(json) ? json : [];
       setConversations(list);
-      if (!activeId && list[0]) {
-        setActiveId(list[0].id);
+
+      if (activeId !== DRAFT_ID && activeId && !list.some((item) => item.id === activeId)) {
+        if (list[0]) {
+          setActiveId(list[0].id);
+        } else {
+          setActiveId(DRAFT_ID);
+          setMessages([]);
+        }
       }
     } finally {
       setLoadingList(false);
@@ -66,6 +87,10 @@ export function ChatConsole({ username }: { username: string }) {
   };
 
   const loadMessages = async (conversationId: string) => {
+    if (conversationId === DRAFT_ID) {
+      setMessages([]);
+      return;
+    }
     const resp = await fetch(`/api/chat/conversations/${conversationId}/messages`, { cache: "no-store" });
     const json = await resp.json();
     setMessages(Array.isArray(json) ? json : []);
@@ -77,26 +102,14 @@ export function ChatConsole({ username }: { username: string }) {
   }, []);
 
   useEffect(() => {
-    if (activeId) {
-      void loadMessages(activeId);
-    }
+    void loadMessages(activeId);
   }, [activeId]);
 
-  const createConversation = async () => {
+  const startNewChat = () => {
     setError("");
-    const resp = await fetch("/api/chat/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-    const json = await resp.json();
-    if (!resp.ok) {
-      setError(typeof json?.error === "string" ? json.error : "创建会话失败");
-      return;
-    }
-    await loadConversations(query);
-    setActiveId(json.id);
+    setActiveId(DRAFT_ID);
     setMessages([]);
+    setPrompt("");
   };
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
@@ -104,46 +117,74 @@ export function ChatConsole({ username }: { username: string }) {
     await loadConversations(query);
   };
 
-  const parseOptions = () => {
-    try {
-      return JSON.parse(advancedOptions || "{}") as Record<string, unknown>;
-    } catch {
-      throw new Error("高级参数 JSON 格式错误");
+  const ensureConversationForSending = async (firstPrompt: string) => {
+    if (activeId !== DRAFT_ID) {
+      return activeId;
     }
+
+    const resp = await fetch("/api/chat/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: firstPrompt.slice(0, 40) || "新聊天" }),
+    });
+    const json = await resp.json();
+    if (!resp.ok) {
+      throw new Error(typeof json?.error === "string" ? json.error : "创建会话失败");
+    }
+
+    await loadConversations(query);
+    setActiveId(json.id);
+    return json.id as string;
   };
 
   const sendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!activeId) {
-      setError("请先创建或选择一个会话。");
-      return;
-    }
     if (!prompt.trim()) return;
 
     setError("");
     setLoadingSend(true);
     try {
-      const options = parseOptions();
-      const resp = await fetch(`/api/chat/conversations/${activeId}/messages`, {
+      const promptText = prompt;
+      const targetId = await ensureConversationForSending(promptText);
+
+      const resp = await fetch(`/api/chat/conversations/${targetId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode,
-          prompt,
-          options,
+          prompt: promptText,
         }),
       });
       const json = await resp.json();
       if (!resp.ok) {
         throw new Error(typeof json?.error === "string" ? json.error : "发送失败");
       }
+
       setPrompt("");
-      await Promise.all([loadMessages(activeId), loadConversations(query)]);
+      await Promise.all([loadMessages(targetId), loadConversations(query)]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "发送失败");
     } finally {
       setLoadingSend(false);
     }
+  };
+
+  const deleteConversation = async (id: string) => {
+    setError("");
+    const resp = await fetch(`/api/chat/conversations/${id}`, {
+      method: "DELETE",
+    });
+    const json = await resp.json();
+    if (!resp.ok) {
+      setError(typeof json?.error === "string" ? json.error : "删除失败");
+      return;
+    }
+
+    if (activeId === id) {
+      setActiveId(DRAFT_ID);
+      setMessages([]);
+    }
+    await loadConversations(query);
   };
 
   const logout = async () => {
@@ -161,7 +202,7 @@ export function ChatConsole({ username }: { username: string }) {
         </div>
 
         <div className="mb-3 flex gap-2">
-          <Button className="flex-1" onClick={createConversation} size="sm">
+          <Button className="flex-1" onClick={startNewChat} size="sm">
             + 新聊天
           </Button>
           <Button onClick={logout} size="sm" variant="outline">
@@ -184,17 +225,26 @@ export function ChatConsole({ username }: { username: string }) {
         <div className="max-h-[calc(100vh-240px)] space-y-2 overflow-auto pr-1">
           {loadingList ? <p className="text-xs text-zinc-500">加载中...</p> : null}
           {conversations.map((item) => (
-            <button
-              className={`w-full cursor-pointer rounded-md border px-3 py-2 text-left transition ${item.id === activeId ? "border-cyan-400/50 bg-cyan-500/10" : "border-white/10 bg-black/20 hover:border-white/20"}`}
+            <div
+              className={`w-full rounded-md border px-2 py-2 transition ${item.id === activeId ? "border-cyan-400/50 bg-cyan-500/10" : "border-white/10 bg-black/20 hover:border-white/20"}`}
               key={item.id}
-              onClick={() => setActiveId(item.id)}
-              type="button"
             >
-              <p className="line-clamp-1 text-sm font-medium">{item.title}</p>
-              <p className="mt-1 text-xs text-zinc-500">
-                {formatTime(item.updatedAt)} · {item.messageCount} 条
-              </p>
-            </button>
+              <div className="flex items-start gap-2">
+                <button className="min-w-0 flex-1 cursor-pointer text-left" onClick={() => setActiveId(item.id)} type="button">
+                  <p className="line-clamp-1 text-sm font-medium">{item.title}</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {formatTime(item.updatedAt)} · {item.messageCount} 条
+                  </p>
+                </button>
+                <button
+                  className="rounded border border-red-400/40 px-2 py-1 text-[11px] text-red-300 hover:bg-red-500/10"
+                  onClick={() => void deleteConversation(item.id)}
+                  type="button"
+                >
+                  删除
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       </aside>
@@ -202,8 +252,8 @@ export function ChatConsole({ username }: { username: string }) {
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-white/10 bg-[#09090f] px-4 py-3">
           <div>
-            <p className="font-display text-lg font-bold">{activeConversation?.title || "未选择会话"}</p>
-            <p className="text-xs text-zinc-500">Gemini 风格：历史会话 + 搜索 + 新聊天</p>
+            <p className="font-display text-lg font-bold">{activeConversation?.title || "新聊天"}</p>
+            <p className="text-xs text-zinc-500">当前模型：{currentModel}</p>
           </div>
           <div className="flex gap-2">
             <Link className="rounded-md border border-white/10 px-3 py-1.5 text-xs hover:bg-white/10" href="/admin">
@@ -257,13 +307,6 @@ export function ChatConsole({ username }: { username: string }) {
               </button>
             </div>
 
-            <textarea
-              className="h-24 w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none ring-cyan-400/40 focus:ring-2"
-              onChange={(e) => setAdvancedOptions(e.target.value)}
-              placeholder={'高级参数 JSON，例如：{"temperature":0.7}'}
-              value={advancedOptions}
-            />
-
             <form className="flex gap-2" onSubmit={sendMessage}>
               <textarea
                 className="h-24 flex-1 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none ring-cyan-400/40 focus:ring-2"
@@ -271,7 +314,7 @@ export function ChatConsole({ username }: { username: string }) {
                 placeholder={mode === "CHAT" ? "输入你的问题..." : mode === "IMAGE" ? "输入生图提示词..." : "输入视频提示词..."}
                 value={prompt}
               />
-              <Button disabled={loadingSend || !activeId} type="submit">
+              <Button disabled={loadingSend} type="submit">
                 {loadingSend ? "发送中..." : "发送"}
               </Button>
             </form>
