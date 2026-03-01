@@ -37,7 +37,21 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .nb.on-travel {color:var(--green); border-color:var(--green); background:var(--green-d);}
 .nb.on-fitness{color:var(--orange);border-color:var(--orange);background:var(--orange-d);}
 .nb.on-finance{color:var(--purple);border-color:var(--purple);background:var(--purple-d);}
+.nb.on-ai{color:var(--yellow);border-color:var(--yellow);background:var(--yellow-d);}
 .t-clock{font-family:var(--fc);font-size:.68rem;color:var(--muted);min-width:72px;text-align:right;}
+.t-right{display:flex;align-items:center;gap:10px;}
+.theme-toggle{padding:5px 10px;border:1px solid var(--border2);border-radius:2px;background:transparent;color:var(--muted2);font-family:var(--fc);font-size:.62rem;letter-spacing:.08em;cursor:pointer;transition:all .2s;}
+.theme-toggle:hover{color:var(--text);border-color:var(--text);}
+
+body.bw-mode{
+  --cyan:#f6f6f6; --cyan-d:rgba(255,255,255,.1); --cyan-g:rgba(255,255,255,.25);
+  --green:#e4e4e4; --green-d:rgba(255,255,255,.07);
+  --orange:#cdcdcd; --orange-d:rgba(255,255,255,.06);
+  --purple:#b9b9b9; --purple-d:rgba(255,255,255,.06);
+  --yellow:#ffffff; --yellow-d:rgba(255,255,255,.08);
+  --red:#a2a2a2; --red-d:rgba(255,255,255,.06);
+}
+body.bw-mode .theme-toggle{color:#fff;border-color:rgba(255,255,255,.45);}
 
 /* ===== PAGES ===== */
 .page{display:none;margin-top:52px;min-height:calc(100vh - 52px);}
@@ -540,6 +554,8 @@ footer{border-top:1px solid var(--border);padding:22px 48px;display:flex;align-i
   .week-grid,.cal-grid{grid-template-columns:repeat(4,1fr);}
   .topbar{padding:0 16px;}
   .t-clock{display:none;}
+  .t-right{gap:6px;}
+  .theme-toggle{padding:5px 8px;}
   .fit-hero-top{grid-template-columns:1fr;justify-items:center;}
   .exp-stats-row{grid-template-columns:1fr 1fr;}
   .expedition-header{grid-template-columns:1fr;}
@@ -564,8 +580,12 @@ footer{border-top:1px solid var(--border);padding:22px 48px;display:flex;align-i
     <button class="nb" id="nb-travel" onclick="goto('travel')">旅游</button>
     <button class="nb" id="nb-fitness" onclick="goto('fitness')">健身</button>
     <button class="nb" id="nb-finance" onclick="goto('finance')">理财</button>
+    <button class="nb" id="nb-ai" onclick="gotoAi()">AI聊天</button>
   </nav>
-  <div class="t-clock" id="clock">--:--:--</div>
+  <div class="t-right">
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">黑白</button>
+    <div class="t-clock" id="clock">--:--:--</div>
+  </div>
 </div>
 
 <!-- ===== HOME PAGE ===== -->
@@ -1313,6 +1333,7 @@ tick(); setInterval(tick,1000);
 
 // Navigation
 const pages=['home','tech','travel','fitness','finance'];
+function gotoAi(){ window.location.href='/chat'; }
 function goto(id){
   pages.forEach(p=>{
     document.getElementById('p-'+p).classList.remove('active');
@@ -1327,6 +1348,21 @@ function goto(id){
   const cc={home:'var(--cyan)',tech:'var(--cyan)',travel:'var(--green)',fitness:'var(--orange)',finance:'var(--purple)'};
   cur.style.background=cc[id]; cur.style.boxShadow='0 0 10px '+cc[id];
 }
+
+function applyTheme(mode){
+  const isBw=mode==='bw';
+  document.body.classList.toggle('bw-mode',isBw);
+  const tg=document.getElementById('themeToggle');
+  if(tg) tg.textContent=isBw?'彩色':'黑白';
+}
+
+function toggleTheme(){
+  const next=document.body.classList.contains('bw-mode')?'color':'bw';
+  localStorage.setItem('lifelog-theme',next);
+  applyTheme(next);
+}
+
+applyTheme(localStorage.getItem('lifelog-theme')||'color');
 
 // ===== VS CODE article switcher =====
 const artFiles=['rust-backend.md','neovim-config.md','bun-hono-app.md','rag-knowledge.md','github-actions.md','sqlite-edge.md'];
