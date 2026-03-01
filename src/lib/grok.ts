@@ -20,6 +20,37 @@ function getHeaders() {
   };
 }
 
+async function requestJson(url: string, init: RequestInit) {
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch (error) {
+    const cause = error instanceof Error && "cause" in error ? (error as Error & { cause?: unknown }).cause : undefined;
+    const causeMsg =
+      cause && typeof cause === "object" && "message" in cause ? String((cause as { message?: unknown }).message) : undefined;
+    const baseMsg = error instanceof Error ? error.message : "unknown fetch error";
+    throw new Error(`Network request failed: ${baseMsg}${causeMsg ? ` | cause: ${causeMsg}` : ""} | url: ${url}`);
+  }
+
+  const text = await response.text();
+  let json: unknown = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = { raw: text };
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof (json as { error?: { message?: unknown } })?.error?.message === "string"
+        ? (json as { error: { message: string } }).error.message
+        : `HTTP ${response.status}`;
+    throw new Error(`${message} | url: ${url}`);
+  }
+
+  return json;
+}
+
 function extractVideoInfo(payload: unknown) {
   if (!payload || typeof payload !== "object") {
     return { status: "unknown" as string, requestId: null as string | null, videoUrl: null as string | null };
@@ -41,7 +72,8 @@ function extractVideoInfo(payload: unknown) {
 }
 
 export async function callGrokChat(history: GrokMessage[], prompt: string, options?: Record<string, unknown>) {
-  const response = await fetch(`${getBaseUrl()}/chat/completions`, {
+  const url = `${getBaseUrl()}/chat/completions`;
+  const json = (await requestJson(url, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
@@ -49,19 +81,25 @@ export async function callGrokChat(history: GrokMessage[], prompt: string, optio
       messages: [...history, { role: "user", content: prompt }],
       ...(options || {}),
     }),
-  });
+  })) as Record<string, unknown>;
 
-  const json = await response.json();
-  if (!response.ok) {
-    throw new Error(typeof json?.error?.message === "string" ? json.error.message : "Grok chat failed.");
-  }
-
-  const answer = json?.choices?.[0]?.message?.content ?? "";
+  const choices = Array.isArray(json.choices) ? json.choices : [];
+  const first = choices[0];
+  const answer =
+    first && typeof first === "object" && first !== null && "message" in first
+      ? (() => {
+          const msg = (first as { message?: unknown }).message;
+          return msg && typeof msg === "object" && msg !== null && "content" in msg
+            ? String((msg as { content?: unknown }).content ?? "")
+            : "";
+        })()
+      : "";
   return { answer, raw: json };
 }
 
 export async function callGrokImage(prompt: string, options?: Record<string, unknown>) {
-  const response = await fetch(`${getBaseUrl()}/images/generations`, {
+  const url = `${getBaseUrl()}/images/generations`;
+  const json = (await requestJson(url, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
@@ -70,12 +108,7 @@ export async function callGrokImage(prompt: string, options?: Record<string, unk
       size: "1024x1024",
       ...(options || {}),
     }),
-  });
-
-  const json = await response.json();
-  if (!response.ok) {
-    throw new Error(typeof json?.error?.message === "string" ? json.error.message : "Grok image failed.");
-  }
+  })) as Record<string, unknown>;
 
   const images =
     Array.isArray(json?.data) &&
@@ -90,7 +123,8 @@ export async function callGrokImage(prompt: string, options?: Record<string, unk
 }
 
 export async function callGrokVideo(prompt: string, options?: Record<string, unknown>) {
-  const submitResponse = await fetch(`${getBaseUrl()}/videos/generations`, {
+  const submitUrl = `${getBaseUrl()}/videos/generations`;
+  const submitJson = await requestJson(submitUrl, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
@@ -99,11 +133,6 @@ export async function callGrokVideo(prompt: string, options?: Record<string, unk
       ...(options || {}),
     }),
   });
-
-  const submitJson = await submitResponse.json();
-  if (!submitResponse.ok) {
-    throw new Error(typeof submitJson?.error?.message === "string" ? submitJson.error.message : "Grok video submit failed.");
-  }
 
   const submitInfo = extractVideoInfo(submitJson);
   if (!submitInfo.requestId) {
@@ -117,11 +146,8 @@ export async function callGrokVideo(prompt: string, options?: Record<string, unk
   for (let i = 0; i < 30; i += 1) {
     if (videoUrl) break;
     await delay(2000);
-    const pollResponse = await fetch(`${getBaseUrl()}/videos/${submitInfo.requestId}`, { headers: getHeaders() });
-    const pollJson = await pollResponse.json();
-    if (!pollResponse.ok) {
-      throw new Error(typeof pollJson?.error?.message === "string" ? pollJson.error.message : "Grok video poll failed.");
-    }
+    const pollUrl = `${getBaseUrl()}/videos/${submitInfo.requestId}`;
+    const pollJson = await requestJson(pollUrl, { headers: getHeaders() });
     const pollInfo = extractVideoInfo(pollJson);
     lastStatus = pollInfo.status;
     lastPayload = pollJson;
