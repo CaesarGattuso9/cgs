@@ -6,7 +6,8 @@ type GrokMessage = {
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function getBaseUrl() {
-  return (process.env.GROK_BASE_URL || "https://api.x.ai/v1").replace(/\/$/, "");
+  const raw = (process.env.GROK_BASE_URL || "https://api.x.ai/v1").replace(/\/$/, "");
+  return /\/v\d+$/i.test(raw) ? raw : `${raw}/v1`;
 }
 
 function getHeaders() {
