@@ -2,6 +2,7 @@ import { FundTransactionType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { requireAdminApi } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const createFundTransactionSchema = z.object({
@@ -71,6 +72,11 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const authResult = await requireAdminApi();
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const payload = createFundTransactionSchema.parse(await req.json());
     const created = await prisma.fundTransaction.create({ data: payload });

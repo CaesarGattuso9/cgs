@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { requireAdminApi } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const createPostSchema = z.object({
@@ -25,6 +26,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const authResult = await requireAdminApi();
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const payload = createPostSchema.parse(await req.json());
     const created = await prisma.post.create({ data: payload });

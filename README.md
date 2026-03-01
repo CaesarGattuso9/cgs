@@ -17,17 +17,28 @@
 - `/`：重定向到原始设计稿页面
 - `/blog.html`：你提供的页面（原样接入）
 - `/studio`：全栈功能工作台（Markdown/地图/统计/K线）
+- `/login`：管理员登录
+- `/admin`：管理后台（写博客、旅游、健身、食物、理财）
+- `/chat`：Grok 聊天/生图/视频生成
 
 ## API
 
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
 - `GET/POST /api/posts`
 - `GET/POST /api/travel-locations`
 - `GET/POST /api/travel-photos`
+- `GET/POST /api/fitness-plans`
 - `GET/POST /api/fitness-records`
+- `GET/POST /api/food-records`
 - `GET/POST /api/fund-accounts`
 - `GET/POST /api/fund-transactions`
 - `POST /api/upload`
+- `POST /api/grok`
 - `GET /api/health`
+
+说明：所有写入接口（POST）默认需要管理员登录 Cookie。
 
 ## 本地运行
 
@@ -53,3 +64,10 @@ docker compose up --build
 ## 环境变量
 
 复制 `.env.example` 为 `.env.local`（本地开发）或使用 `.env.docker`（Docker 编排）。
+
+关键变量：
+
+- `ADMIN_USERNAME` / `ADMIN_PASSWORD`：管理员账号密码
+- `AUTH_SECRET`：登录签名密钥
+- `GROK_API_KEY`：xAI/Grok API key
+- `GROK_CHAT_MODEL` / `GROK_IMAGE_MODEL` / `GROK_VIDEO_MODEL`：模型名

@@ -4,6 +4,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 import sharp from "sharp";
 
+import { requireAdminApi } from "@/lib/auth";
 import { buildPublicObjectUrl, minioBucket, minioClient } from "@/lib/minio";
 
 export const runtime = "nodejs";
@@ -15,6 +16,11 @@ const imageSizes = [
 ] as const;
 
 export async function POST(req: Request) {
+  const authResult = await requireAdminApi();
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   const formData = await req.formData();
   const file = formData.get("file");
 

@@ -84,11 +84,31 @@ model FitnessRecord {
   caloriesBurned Int        @default(0)
   notes         String?
   isCompleted   Boolean     @default(true)
+  foods         FoodRecord[]
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   @@index([planId, trainingDate])
   @@map("fitness_records")
+}
+
+model FoodRecord {
+  id              String         @id @default(cuid())
+  fitnessRecordId String?
+  fitnessRecord   FitnessRecord? @relation(fields: [fitnessRecordId], references: [id], onDelete: SetNull)
+  name            String
+  proteinG        Float          @default(0)
+  carbsG          Float          @default(0)
+  fatG            Float          @default(0)
+  calories        Int            @default(0)
+  notes           String?
+  recordedAt      DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([recordedAt])
+  @@index([fitnessRecordId])
+  @@map("food_records")
 }
 
 model FundAccount {
