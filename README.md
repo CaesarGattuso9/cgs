@@ -69,5 +69,6 @@ docker compose up --build
 
 - `ADMIN_USERNAME` / `ADMIN_PASSWORD`：管理员账号密码
 - `AUTH_SECRET`：登录签名密钥
+- `AUTH_COOKIE_SECURE`：本地 `http` 设为 `false`，线上 `https` 设为 `true`
 - `GROK_API_KEY`：xAI/Grok API key
 - `GROK_CHAT_MODEL` / `GROK_IMAGE_MODEL` / `GROK_VIDEO_MODEL`：模型名

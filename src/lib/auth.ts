@@ -16,6 +16,15 @@ function getAuthSecret() {
   return process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "dev-auth-secret-change-me";
 }
 
+function shouldUseSecureCookie() {
+  const override = process.env.AUTH_COOKIE_SECURE;
+  if (override === "true") return true;
+  if (override === "false") return false;
+
+  const appUrl = process.env.NEXTAUTH_URL || process.env.APP_URL || "";
+  return appUrl.startsWith("https://");
+}
+
 function getAdminUsername() {
   return process.env.ADMIN_USERNAME || "admin";
 }
@@ -111,7 +120,7 @@ export function setAdminSessionCookie(response: NextResponse, token: string) {
     value: token,
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookie(),
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   });
@@ -123,7 +132,7 @@ export function clearAdminSessionCookie(response: NextResponse) {
     value: "",
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookie(),
     path: "/",
     maxAge: 0,
   });
