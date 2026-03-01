@@ -43,15 +43,18 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .theme-toggle{padding:5px 10px;border:1px solid var(--border2);border-radius:2px;background:transparent;color:var(--muted2);font-family:var(--fc);font-size:.62rem;letter-spacing:.08em;cursor:pointer;transition:all .2s;}
 .theme-toggle:hover{color:var(--text);border-color:var(--text);}
 
-body.bw-mode{
-  --cyan:#f6f6f6; --cyan-d:rgba(255,255,255,.1); --cyan-g:rgba(255,255,255,.25);
-  --green:#e4e4e4; --green-d:rgba(255,255,255,.07);
-  --orange:#cdcdcd; --orange-d:rgba(255,255,255,.06);
-  --purple:#b9b9b9; --purple-d:rgba(255,255,255,.06);
-  --yellow:#ffffff; --yellow-d:rgba(255,255,255,.08);
-  --red:#a2a2a2; --red-d:rgba(255,255,255,.06);
+body.light-mode{
+  --bg:#f7f8fb; --surface:#ffffff; --surface2:#f2f4f8; --surface3:#ebeef4;
+  --border:rgba(15,23,42,0.12); --border2:rgba(15,23,42,0.2);
+  --text:#12131a; --muted:#687085; --muted2:#4c5468;
+  --cyan:#0066cc; --cyan-d:rgba(0,102,204,0.12); --cyan-g:rgba(0,102,204,0.2);
+  --green:#0f8a4b; --green-d:rgba(15,138,75,0.12);
+  --orange:#c05a1a; --orange-d:rgba(192,90,26,0.1);
+  --purple:#7a3db8; --purple-d:rgba(122,61,184,0.1);
+  --yellow:#b07a00; --yellow-d:rgba(176,122,0,0.12);
+  --red:#b02b45; --red-d:rgba(176,43,69,0.1);
 }
-body.bw-mode .theme-toggle{color:#fff;border-color:rgba(255,255,255,.45);}
+body.light-mode::after{background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.16) 2px,rgba(255,255,255,0.16) 4px);}
 
 /* ===== PAGES ===== */
 .page{display:none;margin-top:52px;min-height:calc(100vh - 52px);}
@@ -583,7 +586,7 @@ footer{border-top:1px solid var(--border);padding:22px 48px;display:flex;align-i
     <button class="nb" id="nb-ai" onclick="gotoAi()">AI聊天</button>
   </nav>
   <div class="t-right">
-    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">黑白</button>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">浅色</button>
     <div class="t-clock" id="clock">--:--:--</div>
   </div>
 </div>
@@ -1350,19 +1353,19 @@ function goto(id){
 }
 
 function applyTheme(mode){
-  const isBw=mode==='bw';
-  document.body.classList.toggle('bw-mode',isBw);
+  const isLight=mode==='light';
+  document.body.classList.toggle('light-mode',isLight);
   const tg=document.getElementById('themeToggle');
-  if(tg) tg.textContent=isBw?'彩色':'黑白';
+  if(tg) tg.textContent=isLight?'深色':'浅色';
 }
 
 function toggleTheme(){
-  const next=document.body.classList.contains('bw-mode')?'color':'bw';
+  const next=document.body.classList.contains('light-mode')?'dark':'light';
   localStorage.setItem('lifelog-theme',next);
   applyTheme(next);
 }
 
-applyTheme(localStorage.getItem('lifelog-theme')||'color');
+applyTheme(localStorage.getItem('lifelog-theme')||'dark');
 
 // ===== VS CODE article switcher =====
 const artFiles=['rust-backend.md','neovim-config.md','bun-hono-app.md','rag-knowledge.md','github-actions.md','sqlite-edge.md'];

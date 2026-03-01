@@ -13,6 +13,18 @@ enum FundTransactionType {
   FEE
 }
 
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum ChatMode {
+  CHAT
+  IMAGE
+  VIDEO
+}
+
 model Post {
   id        String   @id @default(cuid())
   title     String
@@ -140,4 +152,29 @@ model FundTransaction {
 
   @@index([accountId, transactionAt])
   @@map("fund_transactions")
+}
+
+model ChatConversation {
+  id        String        @id @default(cuid())
+  title     String        @default("新聊天")
+  messages  ChatMessage[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([updatedAt])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           ChatRole
+  mode           ChatMode         @default(CHAT)
+  content        String
+  metadata       Json?
+  createdAt      DateTime         @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("chat_messages")
 }

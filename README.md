@@ -19,13 +19,15 @@
 - `/studio`：全栈功能工作台（Markdown/地图/统计/K线）
 - `/login`：管理员登录
 - `/admin`：管理后台（写博客、旅游、健身、食物、理财）
-- `/chat`：Grok 聊天/生图/视频生成
+- `/chat`：Gemini 风格会话页（新聊天、历史、搜索、生图、视频）
 
 ## API
 
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
+- `GET/POST /api/chat/conversations`
+- `GET/POST /api/chat/conversations/:id/messages`
 - `GET/POST /api/posts`
 - `GET/POST /api/travel-locations`
 - `GET/POST /api/travel-photos`
@@ -45,6 +47,7 @@
 ```bash
 npm install
 npm run prisma:generate
+npm run prisma:push
 npm run dev
 ```
 
